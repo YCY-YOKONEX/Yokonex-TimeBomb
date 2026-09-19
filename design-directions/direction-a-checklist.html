@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>时间炸弹 - 单页检查清单</title>
+  <!-- 假设：沿用现有黑/红/黄品牌色；2-8 名玩家；每人独占一个 A/B 通道并完成测试。 -->
+  <style>
+    * { box-sizing: border-box; }
+    :root { --coal:#171717; --red:#e5483f; --yellow:#f4c95d; --mint:#63c7a5; --paper:#f5f3ed; --line:#d8d4ca; }
+    body { margin:0; background:#d9d8d4; color:var(--coal); font-family:"Microsoft YaHei","PingFang SC",sans-serif; letter-spacing:0; }
+    button, select, input { font:inherit; }
+    button { cursor:pointer; }
+    .stage { min-height:100vh; display:grid; place-items:center; padding:36px; }
+    .board { display:flex; align-items:flex-start; gap:34px; }
+    .note { width:250px; padding-top:26px; }
+    .eyebrow { font-size:12px; font-weight:900; color:var(--red); }
+    h1 { margin:8px 0 12px; font-size:30px; line-height:1.15; }
+    .note p { margin:0; color:#54514b; font-size:14px; line-height:1.75; }
+    .recommended { display:inline-flex; margin-top:18px; padding:7px 10px; background:var(--coal); color:white; font-size:12px; font-weight:900; border-radius:6px; }
+    .phone { width:390px; height:844px; overflow:hidden; background:var(--paper); border:10px solid var(--coal); border-radius:30px; box-shadow:0 26px 60px #0003; }
+    .screen { height:100%; display:flex; flex-direction:column; }
+    .top { height:70px; flex:none; display:flex; align-items:center; padding:0 18px; background:var(--coal); color:white; }
+    .brand { display:flex; align-items:center; gap:10px; font-size:20px; font-weight:900; }
+    .brand-mark { width:30px; height:30px; display:grid; place-items:center; border-radius:50%; background:var(--red); color:white; font-weight:900; }
+    .progress { margin-left:auto; font-size:12px; color:#ffffffa8; font-weight:800; }
+    .content { flex:1; overflow:auto; padding:14px 16px 104px; }
+    .section { padding:16px 0; border-bottom:1px solid var(--line); }
+    .section:first-child { padding-top:4px; }
+    .section-title { display:flex; align-items:center; margin-bottom:11px; }
+    .step { width:24px; height:24px; display:grid; place-items:center; margin-right:8px; border-radius:50%; background:var(--coal); color:white; font-size:12px; font-weight:900; }
+    .section-title strong { font-size:17px; }
+    .section-title small { margin-left:auto; color:#237e63; font-weight:900; }
+    .device { display:flex; align-items:center; gap:10px; padding:11px 12px; background:white; border:1px solid var(--mint); border-radius:8px; }
+    .device-dot { width:10px; height:10px; border-radius:50%; background:var(--mint); box-shadow:0 0 0 4px #63c7a526; }
+    .device-info { flex:1; min-width:0; }
+    .device-info b { display:block; font-size:14px; }
+    .device-info span { font-size:11px; color:#77726a; }
+    .tiny-btn { border:0; border-radius:6px; padding:8px 10px; background:#ebe8e0; font-size:12px; font-weight:900; }
+    .settings { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .control { min-height:72px; padding:10px; background:white; border:1px solid var(--line); border-radius:8px; }
+    .control.full { grid-column:1/-1; }
+    .label { display:block; margin-bottom:7px; color:#6c675f; font-size:11px; font-weight:800; }
+    .value-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .value { font-size:23px; font-weight:900; }
+    .stepper { display:flex; gap:4px; }
+    .stepper button { width:28px; height:28px; border:0; border-radius:6px; background:#eeeae2; font-size:18px; font-weight:900; }
+    select { width:100%; height:35px; border:0; background:#f0ede6; border-radius:6px; padding:0 8px; font-weight:800; }
+    .segments { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; }
+    .segments button { height:34px; border:1px solid var(--line); border-radius:6px; background:white; font-weight:800; }
+    .segments button.active { border-color:var(--coal); background:var(--coal); color:white; }
+    .player { display:grid; grid-template-columns:28px 1fr auto; align-items:center; gap:9px; margin-bottom:8px; padding:10px; background:white; border:1px solid var(--line); border-radius:8px; }
+    .avatar { width:28px; height:28px; display:grid; place-items:center; border-radius:50%; background:var(--yellow); font-size:12px; font-weight:900; }
+    .binding b { display:block; font-size:13px; }
+    .binding span { color:#716c64; font-size:11px; }
+    .ok { display:flex; align-items:center; gap:5px; color:#237e63; font-size:11px; font-weight:900; }
+    .ok::before { content:""; width:7px; height:7px; border-radius:50%; background:var(--mint); }
+    .add { width:100%; height:34px; border:1px dashed #aaa49a; border-radius:7px; background:transparent; font-weight:800; color:#5c5851; }
+    .footer { position:absolute; bottom:10px; left:10px; right:10px; padding:12px 16px 16px; background:linear-gradient(transparent,var(--paper) 22%); }
+    .phone-wrap { position:relative; }
+    .start { width:100%; height:58px; border:0; border-radius:8px; background:var(--red); color:white; font-size:18px; font-weight:900; box-shadow:0 8px 18px #e5483f3b; }
+    .start:active { transform:translateY(1px); }
+    @media (max-width:760px) { .stage{padding:14px}.board{display:block}.note{width:390px;max-width:100%;padding:0 0 18px}.phone{max-width:100%} }
+  </style>
+</head>
+<body>
+  <main class="stage">
+    <div class="board">
+      <aside class="note">
+        <div class="eyebrow">方向 A</div>
+        <h1>单页检查清单</h1>
+        <p>连接、参数、绑定都放在同一页。每完成一项立即显示状态，适合熟悉设备、追求最快开局的用户。</p>
+        <span class="recommended">推荐方向</span>
+      </aside>
+      <div class="phone-wrap">
+        <section class="phone">
+          <div class="screen">
+            <header class="top">
+              <div class="brand"><span class="brand-mark">!</span>时间炸弹</div>
+              <div class="progress">开局准备 3 / 3</div>
+            </header>
+            <div class="content">
+              <section class="section">
+                <div class="section-title"><span class="step">1</span><strong>连接电击器</strong><small>2 台已连接</small></div>
+                <div class="device"><span class="device-dot"></span><div class="device-info"><b>EMS-01 · 一代</b><span>A / B 通道可用</span></div><button class="tiny-btn" onclick="this.textContent=this.textContent==='管理'?'完成':'管理'">管理</button></div>
+              </section>
+              <section class="section">
+                <div class="section-title"><span class="step">2</span><strong>游戏参数</strong><small>已设置</small></div>
+                <div class="settings">
+                  <div class="control"><span class="label">惩罚强度</span><div class="value-row"><span class="value" id="power">30</span><div class="stepper"><button onclick="changePower(-5)">−</button><button onclick="changePower(5)">+</button></div></div></div>
+                  <div class="control"><span class="label">波形</span><select><option>脉冲波</option><option>渐强波</option><option>连击波</option></select></div>
+                  <div class="control full"><span class="label">随机倒计时上限</span><div class="segments"><button>30 秒</button><button class="active">60 秒</button><button>90 秒</button></div></div>
+                </div>
+              </section>
+              <section class="section">
+                <div class="section-title"><span class="step">3</span><strong>绑定玩家</strong><small>3 / 3 已测试</small></div>
+                <div class="player"><span class="avatar">1</span><div class="binding"><b>玩家 1</b><span>EMS-01 · A 通道</span></div><span class="ok">可用</span></div>
+                <div class="player"><span class="avatar">2</span><div class="binding"><b>玩家 2</b><span>EMS-01 · B 通道</span></div><span class="ok">可用</span></div>
+                <div class="player"><span class="avatar">3</span><div class="binding"><b>玩家 3</b><span>EMS-02 · A 通道</span></div><span class="ok">可用</span></div>
+                <button class="add" onclick="alert('添加玩家')">＋ 添加玩家</button>
+              </section>
+            </div>
+          </div>
+        </section>
+        <div class="footer"><button class="start" onclick="this.textContent='3 · 2 · 1'">点燃炸弹</button></div>
+      </div>
+    </div>
+  </main>
+  <script>
+    function changePower(delta){const el=document.getElementById('power');el.textContent=Math.max(1,Math.min(180,Number(el.textContent)+delta));}
+    document.querySelectorAll('.segments button').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('.segments button').forEach(item=>item.classList.remove('active'));button.classList.add('active');}));
+  </script>
+</body>
+</html>
